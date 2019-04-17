@@ -1,0 +1,68 @@
+---
+title: " SBA Dataiku License consumption"
+output:
+  html_document: default
+  date: "`r format(Sys.time(), '%d%B%Y')`"
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dataiku License Consumption Report
+
+This is an R Markdown document which will provide the overview on the SBA DSS consumption . The report provides the formated tabular structure with the number of license consumed and number of license left across the various user roles . 
+
+```{r Dataiku,echo=FALSE,message=FALSE,warning=FALSE}
+packages.required <- c("dplyr","readxl","writexl","reshape","tidyr","stringr","tibble","data.table","hablar","magrittr","ggplot2","plotly")
+packages.diff <- setdiff(packages.required,rownames(installed.packages()))
+if(length(packages.diff>1)){
+  install.packages(packages.diff,dependencies = T)
+}
+invisible(sapply(packages.required,library,character.only=T))
+working_dir <- "C:/Users/Gourab.Chanda/Desktop/R_Codes"
+setwd(working_dir)
+dataiku.user_list <- readxl::read_xlsx(file.choose(),sheet = 1)
+dataiku.user_list$Profile <- as.factor(dataiku.user_list$Profile)
+user_role.list <- unique(dataiku.user_list$Profile)
+admin_user <- dataiku.user_list%>%
+  filter(Profile ==user_role.list[1])
+da_user <- dataiku.user_list%>%
+  filter(Profile ==user_role.list[2])
+ada_user <- dataiku.user_list%>%
+  filter(Profile ==user_role.list[3])
+ds_users <- dataiku.user_list%>%
+  filter(Profile ==user_role.list[4])
+user_role_count <- dataiku.user_list%>%
+  group_by(Profile)%>%
+  count(.)
+
+
+user_role_count%<>%select(c(Profile,License_Consumed=n))
+license_allocated <- c(10,230,20,35,500)
+user_role_count$License_Allocated <- license_allocated
+user_role_count <-  dplyr::mutate(user_role_count,License_Available=License_Allocated-License_Consumed)
+user_role_count <-  dplyr::rename(user_role_count,Consumed=License_Consumed,Allocated=License_Allocated,Available=License_Available)
+
+knitr::kable(user_role_count[], format="html")
+
+```
+
+## Plots used for the Vizualization
+
+The Barplot proivdes the visualisation for the number of license consumed across the various user roles in SBA DSS instance.
+
+
+```{r plot, echo=FALSE}
+
+g <- ggplot(user_role_count, aes(Profile, Consumed,fill=Consumed))
+g + geom_bar(stat="identity", width = 0.5) + 
+  labs(title="SBA Dataiku License", 
+       subtitle="License Consumption", 
+       caption="Source: Dataiku SBA Instance")+
+  theme_minimal()
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
